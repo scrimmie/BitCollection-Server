@@ -19,6 +19,7 @@ const main = async () => {
             validate: false
         }),
     });
+    await apolloServer.start();
     apolloServer.applyMiddleware({ app });
     app.listen(4000, () => {
         console.log('server started on localhost:4000');
