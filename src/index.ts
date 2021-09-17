@@ -9,12 +9,40 @@ import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
 import 'dotenv/config'
+import cookieParser from "cookie-parser";
+import { verify } from "jsonwebtoken";
+import { User } from "./entities/User";
+import { createAccessToken } from './auth'
 
 const main = async () => {
     const orm = await MikroORM.init(mikroConfig);
     await orm.getMigrator().up();
 
     const app = express();
+    app.use(cookieParser())
+
+    app.post("/refresh_token", async (req, res) => {
+        const refreshToken = req.cookies.jid
+        if (!refreshToken){
+            return res.send({ ok: false, accessToken: ''})
+        }
+        
+        let payload: any = null;
+        try {
+            payload = verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!)
+        }catch(err){
+            console.log(err)
+            return res.send({ ok: false, accessToken: ''})
+        }
+
+        const user = await orm.em.findOne(User, {id : payload.userId} )
+
+        if (!user){
+            return res.send({ ok: false, accessToken: ''})
+        }
+
+        return res.send({ ok: true, accessToken: createAccessToken(user)})
+    })
    
     const apolloServer = new ApolloServer({
         schema: await buildSchema({

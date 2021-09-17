@@ -2,7 +2,7 @@ import { MyContext } from "src/types";
 import {Resolver, Mutation, Arg, InputType, Field, Ctx, ObjectType} from "type-graphql";
 import { User } from '../entities/User'
 import argon2 from 'argon2'
-import { creatAccessToken, createRefreshToken } from '../auth'
+import { createAccessToken, createRefreshToken } from '../auth'
 
 @InputType()
 class UsernamePasswordInput {
@@ -109,7 +109,7 @@ export class UserResolver {
 
         return {
             user: user, 
-            token: {accessToken: creatAccessToken(user)}
+            token: {accessToken: createAccessToken(user)}
         }
     }
 }
