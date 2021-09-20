@@ -24,4 +24,7 @@ export class User {
   @Property({ type: 'text' })
   password!: string;
 
+  @Property( {default: 0} )
+  tokenVersion!: number;
+
 }

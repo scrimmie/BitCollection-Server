@@ -1,8 +1,9 @@
 import { MyContext } from "src/types";
-import {Resolver, Mutation, Arg, InputType, Field, Ctx, ObjectType} from "type-graphql";
+import {Resolver, Mutation, Arg, InputType, Field, Ctx, ObjectType, Int} from "type-graphql";
 import { User } from '../entities/User'
 import argon2 from 'argon2'
 import { createAccessToken, createRefreshToken } from '../auth'
+import { wrap } from '@mikro-orm/core';
 
 @InputType()
 class UsernamePasswordInput {
@@ -112,4 +113,20 @@ export class UserResolver {
             token: {accessToken: createAccessToken(user)}
         }
     }
+
+    @Mutation(() => Boolean)
+    async revokeRefreshForUser(
+        @Arg('userId', () => Int) userId: number,
+        @Ctx() { em }: MyContext){ 
+            let user = await em.findOne(User, { id: userId })
+            if(!user){
+                return false
+            }
+            wrap(user).assign({
+                tokenVersion: user.tokenVersion + 1
+            })
+            await em.persistAndFlush(user)
+            return true
+        }
+
 }

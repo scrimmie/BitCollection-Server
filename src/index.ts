@@ -12,7 +12,7 @@ import 'dotenv/config'
 import cookieParser from "cookie-parser";
 import { verify } from "jsonwebtoken";
 import { User } from "./entities/User";
-import { createAccessToken } from './auth'
+import { createAccessToken, createRefreshToken } from './auth'
 
 const main = async () => {
     const orm = await MikroORM.init(mikroConfig);
@@ -40,6 +40,12 @@ const main = async () => {
         if (!user){
             return res.send({ ok: false, accessToken: ''})
         }
+
+        if (user.tokenVersion !== payload.tokenVersion) {
+            return res.send({ ok: false, accessToken: ''})
+        }
+
+        res.cookie('jid', createRefreshToken(user), {httpOnly: true,})
 
         return res.send({ ok: true, accessToken: createAccessToken(user)})
     })
