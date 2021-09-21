@@ -1,9 +1,10 @@
 import { MyContext } from "src/types";
-import {Resolver, Mutation, Arg, InputType, Field, Ctx, ObjectType, Int} from "type-graphql";
+import {Resolver, Mutation, Arg, InputType, Field, Ctx, ObjectType, Int, UseMiddleware} from "type-graphql";
 import { User } from '../entities/User'
 import argon2 from 'argon2'
 import { createAccessToken, createRefreshToken } from '../auth'
 import { wrap } from '@mikro-orm/core';
+import { isAuth } from '../isAuth';
 
 @InputType()
 class UsernamePasswordInput {
@@ -115,6 +116,7 @@ export class UserResolver {
     }
 
     @Mutation(() => Boolean)
+    @UseMiddleware(isAuth)
     async revokeRefreshForUser(
         @Arg('userId', () => Int) userId: number,
         @Ctx() { em }: MyContext){ 

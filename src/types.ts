@@ -6,5 +6,5 @@ export interface MyContext {
     em: EntityManager<IDatabaseDriver<Connection>>,
     req: Request,
     res: Response,
-    payload?: {userId: string}
+    payload?: {userId: number}
 }

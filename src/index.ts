@@ -5,7 +5,6 @@ import mikroConfig from './mikro-orm.config';
 import express from 'express';
 import { ApolloServer } from 'apollo-server-express';
 import {buildSchema} from 'type-graphql';
-import { HelloResolver } from "./resolvers/hello";
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from "./resolvers/user";
 import 'dotenv/config'
@@ -13,6 +12,7 @@ import cookieParser from "cookie-parser";
 import { verify } from "jsonwebtoken";
 import { User } from "./entities/User";
 import { createAccessToken, createRefreshToken } from './auth'
+import { GameResolver } from "./resolvers/game";
 
 const main = async () => {
     const orm = await MikroORM.init(mikroConfig);
@@ -28,6 +28,7 @@ const main = async () => {
         }
         
         let payload: any = null;
+
         try {
             payload = verify(refreshToken, process.env.REFRESH_TOKEN_SECRET!)
         }catch(err){
@@ -52,7 +53,7 @@ const main = async () => {
    
     const apolloServer = new ApolloServer({
         schema: await buildSchema({
-            resolvers: [HelloResolver, PostResolver, UserResolver],
+            resolvers: [PostResolver, UserResolver, GameResolver],
             validate: false
         }),
         context: ({ req, res }) => ({ em: orm.em, req: req, res: res})

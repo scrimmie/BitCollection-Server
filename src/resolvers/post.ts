@@ -1,4 +1,6 @@
 import { Post } from "../entities/Post";
+import { User } from "../entities/User";
+import { Game } from "../entities/Game";
 import {Resolver, Query, Ctx, Arg, Int, Mutation, UseMiddleware} from "type-graphql";
 import { MyContext } from "../types";
 import { isAuth } from "../isAuth";
@@ -7,11 +9,21 @@ import { isAuth } from "../isAuth";
 export class PostResolver {
     @Query(() => [Post])
     @UseMiddleware(isAuth)
-    posts(
+    async user_posts(
         @Ctx() {em, payload}: MyContext
     ): Promise<Post[]> {
-        console.log(payload)
-        return em.find(Post, {});
+        const user = await em.findOne(User, { id: payload!.userId });
+        return em.find(Post, { author: user });
+    }
+
+    @Query(() => [Post])
+    @UseMiddleware(isAuth)
+    async game_posts(
+        @Arg("game_id", () => Int) id: number,
+        @Ctx() {em}: MyContext
+    ): Promise<Post[]> {
+        const game = await em.findOne(Game, { id: id });
+        return em.find(Post, { game: game });
     }
 
     @Query(() => Post, {nullable: true})
@@ -26,11 +38,11 @@ export class PostResolver {
     @Mutation(() => Post)
     @UseMiddleware(isAuth)
     async createPost(
-        @Arg("title") title: string,
+        @Arg("content") content: string,
         @Arg("likes") likes: number,
         @Ctx() {em}: MyContext
     ): Promise<Post> {
-        const post = em.create(Post, {title, likes})
+        const post = em.create(Post, {content, likes})
         await em.persistAndFlush(post)
         return post;
     }

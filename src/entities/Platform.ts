@@ -1,11 +1,11 @@
 import { Entity, PrimaryKey, Property, ManyToOne } from "@mikro-orm/core";
 import {ObjectType, Field, Int } from 'type-graphql'
 import { User } from './User'
-import { Game } from './Game'
+import { Game } from './Game' 
 
 @ObjectType()
 @Entity()
-export class Post {
+export class Platform {
   
   @Field(() => Int)
   @PrimaryKey()
@@ -21,17 +21,14 @@ export class Post {
 
   @Field(() => String)
   @Property({ type: 'text' })
-  content!: string;
-
-  @Field(() => Int)
-  @Property()
-  likes!: number;
+  platform_name!: string;
 
   @Field(() => User)
   @ManyToOne()
-  author!: User;
+  owner!: User;
 
   @Field(() => Game)
   @ManyToOne()
   game!: Game;
+
 }
