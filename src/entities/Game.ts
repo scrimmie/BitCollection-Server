@@ -22,9 +22,9 @@ export class Game {
   @Property({ type: 'text' })
   name!: string;
 
-  @Field(() => String)
+  @Field(() => Int)
   @Property()
-  igdb_id!: string;
+  igdb_id!: number;
 
   @Field(() => [Post])
   @OneToMany(() => Post, post => post.game)

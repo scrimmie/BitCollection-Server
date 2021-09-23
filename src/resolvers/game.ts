@@ -1,16 +1,16 @@
 // import { Post } from "../entities/Post";
 import { User } from "../entities/User";
-// import { Game } from "../entities/Game";
-import {Resolver, Query, Ctx, Arg, Int, UseMiddleware, ObjectType, Field} from "type-graphql";
+import { Game } from "../entities/Game";
+import { Platform } from "../entities/Platform"
+import {Resolver, Query, Ctx, Arg, Int, UseMiddleware, ObjectType, Field, Mutation, } from "type-graphql";
 import { MyContext } from "../types";
 import { isAuth } from "../isAuth";
-import { Platform } from '../entities/Platform'
-import { get_game } from "../igdb_helper";
+import { get_game, get_games } from "../igdb_helper";
 
 @ObjectType()
 class GamesResponse {
-    @Field(() => [Game_igdb], {nullable: true})
-    games?: Game_igdb[]
+    @Field(() => [Platform_Response], {nullable: true})
+    games_by_platform?: [Platform_Response]
 
     @Field(() => Number, {nullable: true})
     total?: Number
@@ -18,6 +18,16 @@ class GamesResponse {
     @Field(() => Number, {nullable: true})
     total_consoles?: Number
 }
+
+@ObjectType()
+class Platform_Response {
+    @Field({nullable: true})
+    platform?: String
+
+    @Field(() => [Game_igdb], {nullable: true})
+    games?: [Game_igdb]
+}
+
 
 @ObjectType()
 class Cover {
@@ -142,24 +152,32 @@ export class GameResolver {
         @Ctx() {em, payload}: MyContext
     ): Promise<GamesResponse> {
         const user = await em.findOne(User, { id: payload!.userId });
-        const platforms = await em.find(Platform, { owner: user });
-        let consoles:[String]
-        let games:any
-        platforms.forEach((item) => {
+        const platforms = await em.find(Platform, { owner: user }, ['game']);
+        var consoles:string[] = []
+        var games:any = {}
+        var games_output:any = []
+
+        platforms.forEach(async (item) => {
             if (!consoles.includes(item.platform_name)){
                 consoles.push(item.platform_name);
             }
 
             //add in information to do a bulk call for the end game info
-
             if (!games.hasOwnProperty(item.platform_name)){
-                games[item.platform_name] = [item.game]
+                games[item.platform_name] = [item.game.igdb_id]
             }else{
-                games[item.platform_name].push(item.game)
+                games[item.platform_name].push(item.game.igdb_id)
             }
+
         })
+
+        await Promise.all(Object.keys(games).map(async (key) => {
+            let game_igdb = await get_games(games[key])
+            games_output.push({platform : key, games: game_igdb})
+        }));
+
         return {
-            games: games,
+            games_by_platform: games_output,
             total: platforms.length,
             total_consoles: Object.keys(games).length
         }
@@ -175,7 +193,21 @@ export class GameResolver {
         // if (!game){
         //     return null
         // }
-        const game_igdb = await get_game(id.toString())
+        const game_igdb = await get_game(id)
+
+        return game_igdb
+    }
+
+    @Query(() => [Game_igdb])
+    @UseMiddleware(isAuth)
+    async games(
+        @Arg("game_ids", () => [Int]) ids: [number],
+    ): Promise<[Game_igdb] | null> {
+        // const game = await em.findOne(Game, { id: id });
+        // if (!game){
+        //     return null
+        // }
+        const game_igdb = await get_games(ids)
 
         return game_igdb
     }
@@ -189,17 +221,30 @@ export class GameResolver {
     //     return em.findOne(Post, { id });
     // }
 
-    // @Mutation(() => Post)
-    // @UseMiddleware(isAuth)
-    // async createPost(
-    //     @Arg("content") content: string,
-    //     @Arg("likes") likes: number,
-    //     @Ctx() {em}: MyContext
-    // ): Promise<Post> {
-    //     const post = em.create(Post, {content, likes})
-    //     await em.persistAndFlush(post)
-    //     return post;
-    // }
+    @Mutation(() => Game)
+    @UseMiddleware(isAuth)
+    async addGame(
+        @Arg("game_id") id: number,
+        @Arg("game_name") name: string,
+        @Arg("platform_name") platform_name: string,
+        @Ctx() {em, payload}: MyContext
+    ): Promise<Game> {
+        const user = await em.findOne(User, { id: payload!.userId });
+        var game = await em.findOne(Game, { id: id });
+        if (game){
+            var platform = await em.find(Platform, { platform_name: platform_name, owner: user, game: game });
+            if (platform) {
+                return game
+            }
+            const relation = em.create(Platform, {platform_name: platform_name, owner: user, game: game})
+            await em.persistAndFlush(relation)
+        }
+        game = em.create(Game, {id: id, name: name, igdb_id: id})
+        const relation = em.create(Platform, {platform_name: platform_name, owner: user, game: game})
+        await em.persistAndFlush(game)
+        await em.persistAndFlush(relation)
+        return game;
+    }
     
     // @Mutation(() => Post, {nullable: true})
     // @UseMiddleware(isAuth)
